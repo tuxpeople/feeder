@@ -1,0 +1,23 @@
+[project]
+name = "feeder"
+# Canonical Python version for the project. CI reads this via
+# actions/setup-python's `python-version-file: pyproject.toml`.
+requires-python = "==3.15.*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+# S (flake8-bandit) catches security issues such as Flask's debug mode or
+# unsafe file handling, which is what this app got wrong before.
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use assert by design
+"tests/*" = ["S101"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

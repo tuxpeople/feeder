@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom source</title>
+  <id>urn:example:atom</id>
+  <updated>2026-11-04T10:00:00Z</updated>
+  <entry>
+    <title>Atom middle</title>
+    <id>urn:example:atom:2</id>
+    <link href="https://atom.example.com/2"/>
+    <updated>2026-11-04T10:00:00Z</updated>
+    <author><name>Jane</name></author>
+    <summary>Plain summary</summary>
+  </entry>
+  <entry>
+    <title>Duplicate title</title>
+    <id>urn:example:atom:1</id>
+    <link href="https://atom.example.com/1"/>
+    <updated>2026-11-02T10:00:00Z</updated>
+  </entry>
+</feed>

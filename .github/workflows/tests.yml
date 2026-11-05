@@ -1,0 +1,111 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Ruff + Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: pyproject.toml
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      # The S rules (flake8-bandit) flag Flask's debug mode and similar issues
+      - name: Run Ruff lint
+        run: ruff check .
+
+      - name: Run Ruff format check
+        run: ruff format --check .
+
+      - name: Run pytest
+        run: pytest -v
+
+  hadolint:
+    name: Dockerfile Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+  image-test:
+    name: Image Smoke Test + Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image (local only, no push, native arch)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: feeder:test
+
+      # Run it like in Kubernetes (read-only root, foreign UID, no
+      # capabilities) with the test feeds as sources
+      - name: Smoke test
+        run: |
+          work="$RUNNER_TEMP/feeder"
+          mkdir -p "$work/config" "$work/out" && chmod 777 "$work/out"
+          printf '/fixtures/rss.xml\n/fixtures/atom.xml\n' > "$work/config/urls.txt"
+          docker run -d --name feeder --read-only --user 65534:65534 --cap-drop ALL \
+            -v "$PWD/tests/fixtures:/fixtures:ro" \
+            -v "$work/config:/app/config:ro" -v "$work/out:/app/out" \
+            -e FEED_ITEMS=3 -e FEED_ID=urn:example:merged -e FEED_TITLE=Merged \
+            -e FEED_SUBTITLE=Test -e FEED_AUTHOR_NAME=Test -e FEED_AUTHOR_EMAIL=test@example.com \
+            -e FEED_LINK_ALTERNATE=https://example.com/ -e FEED_LINK_SELF=https://example.com/feed.xml \
+            -e FEED_UPDATE_INTERVAL=60 feeder:test
+          trap 'docker logs feeder; docker rm -f feeder >/dev/null' EXIT
+
+          for i in $(seq 1 30); do
+            [[ -s "$work/out/feed.xml" ]] && break
+            sleep 1
+          done
+          for title in "RSS newest" "Atom middle" "Duplicate title"; do
+            grep -q "<title>${title}</title>" "$work/out/feed.xml" || { echo "::error::'$title' missing in feed.xml"; exit 1; }
+          done
+          echo "✅ feed.xml merges both sources"
+
+          # Without configuration it must fail (exit code via docker inspect,
+          # which is reliable on every Docker host)
+          docker run --read-only --name noconfig feeder:test > /tmp/noconfig.log 2>&1 || true
+          code=$(docker inspect --format '{{.State.ExitCode}}' noconfig)
+          docker rm noconfig >/dev/null
+          cat /tmp/noconfig.log
+          [[ "$code" != "0" ]] && grep -q "Missing environment variables" /tmp/noconfig.log
+          echo "✅ refuses to start without configuration"
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: feeder:test
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"

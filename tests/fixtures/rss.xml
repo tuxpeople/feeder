@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>RSS source</title>
+    <link>https://rss.example.com/</link>
+    <description>Test feed</description>
+    <item>
+      <title>RSS newest</title>
+      <link>https://rss.example.com/3</link>
+      <guid>https://rss.example.com/3</guid>
+      <pubDate>Wed, 05 Nov 2026 10:00:00 +0000</pubDate>
+      <description>&lt;p&gt;HTML summary&lt;/p&gt;</description>
+      <category>news</category>
+    </item>
+    <item>
+      <title>Duplicate title</title>
+      <link>https://rss.example.com/2</link>
+      <guid>https://rss.example.com/2</guid>
+      <pubDate>Mon, 03 Nov 2026 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>RSS oldest</title>
+      <link>https://rss.example.com/1</link>
+      <guid>https://rss.example.com/1</guid>
+      <pubDate>Sat, 01 Nov 2026 10:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>
