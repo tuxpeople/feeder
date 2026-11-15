@@ -21,7 +21,7 @@ RUN python -m venv /opt/venv && \
 
 # Copy the virtualenv into the minimal distroless Chainguard Python runtime
 # hadolint ignore=DL3007
-FROM cgr.dev/chainguard/python:latest@sha256:e5d8d4eb6975957350c8deb3afb09ea5328629d50a6916fc9863015fbfc0d8f8
+FROM cgr.dev/chainguard/python:latest@sha256:1f18c1d5b8b986ee00542f2528899b1b68484b9991a80d7c5bcb819e931ddf69
 
 # OCI Labels
 LABEL org.opencontainers.image.title="feeder"
